@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import os,urllib2,urllib,codecs,time,cookielib,re,sys,pickle
+import os,urllib2,urllib,codecs,time,cookielib,re,sys,pickle,getpass
 
 OUTPUT_DIR = "./"
 LOG_DIR = OUTPUT_DIR + "log/"
@@ -256,13 +256,15 @@ def saveConfig(config):
     with open(CONFIGFILE,"wb") as f:
         pickle.dump(config,f)
 
-def loafConfig():
+def loadConfig():
     if os.path.exists(CONFIGFILE):
         with open(CONFIGFILE, "rb") as f:
-        config = pickle.load(f)
-        return config
-    return []
-
+            config = pickle.load(f)
+        usernames = set()
+        for c in config:
+            usernames.add(c["username"])
+        return [config,usernames]
+    return [[],set()]
 
 def getLogin(username,password):
     while username == "":
@@ -277,3 +279,72 @@ def getLogin(username,password):
             return -1
 
     return [username,password]
+
+
+def manageDomains(domains):
+    accountDomains = set()
+    if len(domains) == 0:
+        print "There are no domains linked to this account"
+    elif len(domains) == 1:
+        print "Monitoring :",domains[0]
+        accountDomains.add(domains[0])
+    else:
+        while (len(domains) > 0):
+            print "Which domain do you want to keep updated ?"
+            i = 1
+            for domain in domains:
+                print str(i) + ")",domain
+                i = i + 1
+            print str(i) + ") All"
+            d = -1
+            while not d.isdigit() or int(d) < 1 or int(d) > len(domains)+1:
+                d = raw_input("Select the domain to monitore :")
+            d = int(d)
+            d = d-1
+            if d == len(domains):
+                print "Monitoring every domains in this account"
+                for d in domains:
+                    accountDomains.add(d)
+                domains = []
+            else:
+                accountDomains.add(domains[d])
+                print "Monitoring :",domains[d]
+                domains = domains[:d] + domains[d+1:]
+            #Do you want to add another domain?
+            if len(domains)== 0:
+                break
+            if not yes_no_question("Would you like to add another domain?"):
+                break
+    return accountDomains
+
+
+def createAccount(username,password):
+    res = getLogin(username,password)
+    if res == -1:
+        return -1
+    else:
+        [username,password] = res
+
+        domains = login(username,password)
+        if domains == -1:
+            print "Wrong username or password"
+            username = ""
+            password = ""
+            return -1
+        else:
+            account = {"username" : username,"password" : password}
+            account["domains"] = manageDomains(domains)
+            return account
+
+
+def showAccounts(accounts):
+    if len(accounts) == 0:
+        print "No account stored"
+    else:
+        i = 1
+        for account in accounts:
+            print str(i)+")",account["username"]
+            for domain in account["domains"]:
+                print "\t",domain
+            i = i + 1
+    raw_input("Press ENTER to continue...")

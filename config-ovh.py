@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import ovh,os.path,urllib2,urllib,codecs,time,cookielib,re,sys,getpass,getopt
+import ovh,os.path,urllib2,urllib,codecs,time,cookielib,re,sys,getopt
 
 def showHelp():
     print "usage:",sys.argv[0],
@@ -25,70 +25,86 @@ for opt in optlist:
         showHelp()
 
 
-#adding = True
-#
-#while adding:
+adding = True
+[accounts,usernames] = ovh.loadConfig()
+ovh.showAccounts(accounts)
 
-while username == "":
-    password = ""
-    username = raw_input("Enter your OVH login :")
+while adding:
+        #What do you want to do?
+        d = ""
+        while not d.isdigit() or int(d) < 1 or int(d) > 5:
+            print "What do you want to do?"
+            print "1) Add another account"
+            print "2) Edit the current account"
+            print "3) Delete an account"
+            print "4) List accounts"
+            print "5) I'm done thank you"
+            d = raw_input("Enter your choice : ")
+        d = int(d)
 
-if password == "":
-    password = getpass.getpass("Password :")
-    password2 = getpass.getpass("Re-type :")
-    if password != password2:
-        print "password mismatch"
-        sys.exit()
-
-
-print [username,password]
-domains = ovh.login(username,password)
-if domains == -1:
-    print "Wrong username or password"
-    sys.exit()
-
-
-account = {"username" : username,"password" : password}
-
-account["domains"] = set()
-
-if len(domains) == 0:
-    print "There are no domains linked to this account"
-    sys.exit()
-elif len(domains) == 1:
-    print "Monitoring :",domains[0]
-    account["domains"].add(domains[0])
-else:
-    while (len(account["domains"]) != len(domains)):
-        print "Which domain do you want to keep updated ?"
-        i = 1
-        for domain in domains:
-            print str(i) + ")",domain
-            i = i + 1
-        print str(i) + ") All"
-        d = -1
-        while d < 1 or d > len(domains)+1:
-            d = raw_input("Select the domain to monitore :")
-            if not d.isdigit():
-                d = -1
+        if d == 1:
+            print "Creating a new account"
+            res = ovh.getLogin(username,password)
+            if res == -1:
+                continue
             else:
-                d = int(d)
-        d = d-1
-        if d == len(domains):
-            print "Monitoring every domains in this account"
-            for d in domains:
-                account["domains"].add(d)
+                [username,password] = res
+                if username in usernames:
+                    print "Username already managed.Please choose Edit"
+                    continue
+                account = ovh.createAccount(username,password)
+                if account != -1 and len(account["domains"]) > 0:
+                    # Adding the set
+                    accounts += [account,]
+                    usernames.add(account["username"])
+        elif d == 2:
+            print "Editing an account"
+            if len(accounts) == 0:
+                print "No account to edit yet.Please Add an account first"
+                continue
+            else:
+                print "Which account would you like to edit?"
+                i = 1
+                for account in accounts:
+                    print str(i)+")",account["username"]
+                    for domain in account["domains"]:
+                        print "\t",domain
+                    i = i + 1
+                d = ""
+                while not d.isdigit() or int(d) < 1 or int(d) > len(accounts):
+                    d = raw_input("Account #: ")
+                print "Editing account",d
+                d = int(d) - 1
+        elif d == 3:
+            print "Deleting an account"
+            if len(accounts) == 0:
+                print "No account to delete.Please Add an account first"
+                continue
+            else:
+                print "Which account would you like to delete?"
+                i = 1
+                for account in accounts:
+                    print str(i)+")",account["username"]
+                    for domain in account["domains"]:
+                        print "\t",domain
+                    i = i + 1
+                d = ""
+                while not d.isdigit() or int(d) < 1 or int(d) > len(accounts):
+                    d = raw_input("Account #:" )
+                print "Deleting account",d
+                d = int(d) - 1
+                usernames.remove(accounts[d]["username"])
+                accounts = accounts[:d] + accounts[d+1:]
+        elif d == 4:
+            print "Listing accounts"
+            ovh.showAccounts(accounts)
         else:
-            account["domains"].add(domains[d])
-            print "Monitoring :",domain
-
-        #Do you want to add another domain?
-        if (len(account["domains"]) == len(domains)):
             break
-        if not ovh.yes_no_question("Would you like to add another domain?"):
-            break
+        username = ""
+        password = ""
+        
 
-saveConfig(account)
+ovh.saveConfig(accounts)
 
 #if os.path.isfile(ovh.CONFIGFILE):
 #    print "You already have configured the script"
