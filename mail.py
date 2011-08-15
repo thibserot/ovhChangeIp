@@ -43,6 +43,7 @@ if config == -1:
 else:
     [username,password] = config
     val = sys.stdin.read()
+    now = datetime.datetime.now()
     if len(val) > 2:
         msg = MIMEText(val)
         msg['Subject'] = "Updating ip address at " + str(now)
