@@ -6,23 +6,66 @@ OUTPUT_DIR = "./"
 LOG_DIR = OUTPUT_DIR + "log/"
 COOKIEFILE = OUTPUT_DIR + "cookie.lwp"
 CONFIGFILE = OUTPUT_DIR + "config.ovh"
+MAILFILE = OUTPUT_DIR + "mail.ovh"
+IP_PATH = OUTPUT_DIR + "ip.txt"
 DEBUG = 1
 VERBOSE = 1
 
-urlopen = urllib2.urlopen
-Request = urllib2.Request
-cj = cookielib.LWPCookieJar()
-if os.path.isfile(COOKIEFILE):
-    cj.load(COOKIEFILE)
-
-opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-urllib2.install_opener(opener)
-
+urlopen = None
+Request = None
+cj = None
 lasturl = ""
 
-if DEBUG == 1 and not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
+def init(output_dir = "./",verbose=0,debug=0):
+    global OUTPUT_DIR
+    global LOG_DIR
+    global COOKIEFILE
+    global CONFIGFILE
+    global MAILFILE
+    global IP_PATH
+    global DEBUG
+    global VERBOSE
+    global urlopen
+    global Request
+    global cj
+    global lasturl
 
+    if os.path.exists(output_dir):
+        OUTPUT_DIR = output_dir
+    else:
+        print output_dir,"doesn't exist"
+        OUTPUT_DIR = "./"
+    if int(verbose) != 1 and int(verbose) != 0:
+        print "Wrong value for verbose"
+        verbose = 1
+    else:
+        verbose = int(verbose)
+
+    if int(debug) != 1 and int(debug) != 0:
+        print "Wrong value for debug"
+        debug = 1
+    else:
+        debug = int(debug)
+
+
+    VERBOSE = verbose
+    DEBUG = debug
+    LOG_DIR = OUTPUT_DIR + "log/"
+    COOKIEFILE = OUTPUT_DIR + "cookie.lwp"
+    CONFIGFILE = OUTPUT_DIR + "config.ovh"
+    IP_PATH = OUTPUT_DIR + "ip.txt"
+    MAILFILE = OUTPUT_DIR + "mail.ovh"
+    
+    urlopen = urllib2.urlopen
+    Request = urllib2.Request
+    cj = cookielib.LWPCookieJar()
+    if os.path.isfile(COOKIEFILE):
+        cj.load(COOKIEFILE)
+    
+    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    urllib2.install_opener(opener)
+    if DEBUG == 1 and not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
 
 def login(user,password,encoding=""):
     if VERBOSE == 1:
@@ -150,9 +193,9 @@ def changeIp(domain,ip,A,encoding=""):
             if VERBOSE == 1:
                 print subdomain,"already has the proper ip",ip
             continue
-        # To remove
-        if subdomain == "":
-            continue
+        #### To remove
+        ###if subdomain == "":
+        ###    continue
         
         if VERBOSE == 1:
             print "selecting A subdomain",subdomain,"with",target
@@ -200,6 +243,20 @@ def changeIp(domain,ip,A,encoding=""):
             f.write(htmlSource)
             f.close()
 
+def logout(encoding = ""):
+        if VERBOSE == 1:
+            print "logout"
+        url = "https://www.ovh.com/managerv3/logout.pl"
+        values = {  "language":"en",
+                    "hostname":"",
+                    "lastxsldoc":"sub-home.xsl",
+                    "csid" : "0"
+                 }
+        htmlSource = readURL2(url,values,"get",encoding)
+        if DEBUG == 1:
+            f = codecs.open(LOG_DIR + "login-8 " + subdomain + ".html","w",encoding='utf-8')
+            f.write(htmlSource)
+            f.close()
 
 def readURL2(url,values,method="post",encoding=""):
     global lasturl
@@ -266,10 +323,23 @@ def loadConfig():
         return [config,usernames]
     return [[],set()]
 
-def getLogin(username,password):
+def saveEmail(config):
+    with open(MAILFILE,"wb") as f:
+        pickle.dump(config,f)
+
+def loadEmail():
+    if os.path.exists(MAILFILE):
+        with open(MAILFILE, "rb") as f:
+            config = pickle.load(f)
+        return config
+    return -1
+
+
+
+def getLogin(username="",password=""):
     while username == "":
         password = ""
-        username = raw_input("Enter your OVH login :")
+        username = raw_input("Enter your login :")
     
     if password == "":
         password = getpass.getpass("Password :")
@@ -348,3 +418,18 @@ def showAccounts(accounts):
                 print "\t",domain
             i = i + 1
     raw_input("Press ENTER to continue...")
+
+def get_my_ip_address():
+    whatismyip = 'http://automation.whatismyip.com/n09230945.asp'
+    return urllib.urlopen(whatismyip).readlines()[0]
+
+def configureMail():
+    res = getLogin()
+    if res == -1:
+        return
+    else:
+        [username,password] = res
+        if not re.search("@gmail.com",username):
+            username += "@gmail.com"
+        saveEmail([username,password])
+

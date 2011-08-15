@@ -1,1 +1,10 @@
 Script that will automatically update your IP on OVH
+To use it, first run config-ovh.py
+You will need to add an OVH account (choice 1)
+If you want to be notified when the update happened or of any troubles,
+you need to configure your email settings (choice 5) (Works only with a gmail account so far)
+
+The script will automatically update for every subdomains the A field with your new ip address.
+The script is still in beta test, so if you find any bugs please report them.
+
+Enjoy

@@ -1,44 +1,55 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import ovh,os.path,urllib2,urllib,codecs,time,cookielib,re,sys,getopt
+import ovh,os.path,urllib2,urllib,codecs,time,cookielib,re,sys,getopt,os
 
 def showHelp():
     print "usage:",sys.argv[0],
-    print "[-h] [-u username] [-p password]"
+    print "[-h] [-o output_dir] [-v] [-d]"
+    print "-h : Show this menu"
+    print "-o : Specify the output directory to load config file"
+    print "-v : Verbose mode"
+    print "-d : Debug mode"
     sys.exit()
 
 
 
 args = sys.argv[1:]
-optlist, args = getopt.getopt(args,"u::p::h")
+optlist, args = getopt.getopt(args,"o::hvd")
 
 username = ""
 password = ""
+output_dir = "./"
+verbose = 0
+debug = 0
 
 for opt in optlist:
     [param,val] = opt
-    if param == "-u":
-        username = val
-    elif param == "-p":
-        password = val
+    if param == "-o":
+        output_dir = val
     elif param == "-h":
         showHelp()
+    elif param == "-v":
+        verbose = 1
+    elif param == "-d":
+        debug = 1
 
 
-adding = True
+ovh.init(output_dir,verbose,debug)
+
 [accounts,usernames] = ovh.loadConfig()
 ovh.showAccounts(accounts)
 
-while adding:
+while True:
         #What do you want to do?
         d = ""
-        while not d.isdigit() or int(d) < 1 or int(d) > 5:
+        while not d.isdigit() or int(d) < 1 or int(d) > 6:
             print "What do you want to do?"
             print "1) Add another account"
-            print "2) Edit the current account"
+            print "2) Edit the current account (Not Implemented)"
             print "3) Delete an account"
             print "4) List accounts"
-            print "5) I'm done thank you"
+            print "5) Configure Mail settings (gmail account only)"
+            print "6) I'm done thank you"
             d = raw_input("Enter your choice : ")
         d = int(d)
 
@@ -98,13 +109,21 @@ while adding:
         elif d == 4:
             print "Listing accounts"
             ovh.showAccounts(accounts)
+        elif d == 5:
+            print "Configuring mail settings"
+            ovh.configureMail()
         else:
             break
         username = ""
         password = ""
         
-
+#print accounts
 ovh.saveConfig(accounts)
+
+path = os.getcwd() + "/" + sys.argv[0][:sys.argv[0].rfind("/") + 1]
+
+print "To run the script every 3 hours, add the following line in your crontab :"
+print "0 */3 * * * " + path + "checkip.py -o " + ovh.OUTPUT_DIR + " | " + path + "mail.py -o " + ovh.OUTPUT_DIR
 
 #if os.path.isfile(ovh.CONFIGFILE):
 #    print "You already have configured the script"
